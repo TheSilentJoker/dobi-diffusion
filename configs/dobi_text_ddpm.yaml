@@ -1,0 +1,42 @@
+data:
+  labels: data/labels.xlsx
+  image_dir: data/processed
+  manifest: data/manifests/dobi_prompts.csv
+  image_size: 128
+
+prompt:
+  language: en
+  negative_prompt_policy: fixed_artifact_and_modality_filter
+
+model:
+  type: text_conditioned_pixel_ddpm
+  text_encoder: openai/clip-vit-base-patch32
+  channels: 3
+  scheduler: ddpm
+  train_timesteps: 1000
+  inference_steps: 100
+  guidance_scale: 2.0
+
+training:
+  epochs: 100
+  batch_size: 16
+  learning_rate: 0.0001
+  weight_decay: 0.01
+  prompt_dropout: 0.1
+  balanced_sampling: true
+  seed: 42
+  output_dir: outputs/text_ddpm
+
+evaluation:
+  generation_metrics:
+    - feature_fid
+    - feature_kid
+    - nearest_real_cosine
+    - intensity_statistics
+  downstream_metrics:
+    - roc_auc
+    - average_precision
+    - balanced_accuracy
+    - sensitivity
+    - specificity
+    - f1
