@@ -1,0 +1,48 @@
+data:
+  manifest: data/manifests/dobi_prompts.csv
+  image_size: 128
+
+model:
+  type: dobi_mask_metadata_text_ddpm
+  text_encoder: openai/clip-vit-base-patch32
+  condition_mode: text_mask_metadata
+  image_channels: 3
+  mask_channels: 1
+  metadata_columns:
+    - Breast_Ratio_Global(%)
+    - Illum_Coverage_Local(%)
+    - Leak_Ratio_Local(%)
+  metadata_tokens: 4
+  scheduler: ddpm_squaredcos_cap_v2
+
+training:
+  epochs: 30
+  batch_size: 16
+  learning_rate: 0.0001
+  weight_decay: 0.01
+  balanced_sampling: true
+  prompt_dropout: 0.1
+  mask_threshold: 12
+  foreground_loss_weight: 2.0
+  background_loss_weight: 1.5
+  background_black_loss_weight: 0.05
+  min_snr_gamma: 5.0
+  ema: true
+  ema_decay: 0.999
+  save_every: 10
+  output_dir: outputs/dobi_mask_metadata_ddpm
+
+sampling:
+  use_ema: true
+  freeu: true
+  guidance_scale: 2.0
+  steps: 100
+  mask_source: canonical
+
+ablation_presets:
+  - text_only
+  - text_mask
+  - text_mask_metadata
+  - no_metadata
+  - no_min_snr
+  - no_bg_loss

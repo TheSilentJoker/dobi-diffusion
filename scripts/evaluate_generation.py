@@ -7,6 +7,7 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
+from PIL import Image
 from scipy.linalg import sqrtm
 from sklearn.decomposition import PCA
 from sklearn.metrics.pairwise import cosine_similarity
@@ -17,6 +18,29 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
 from breastdiffusion.image_features import extract_feature_matrix
+
+
+def _dobi_image_stats(paths: list[str], threshold: int = 12) -> dict[str, float]:
+    dark_ratios: list[float] = []
+    foreground_ratios: list[float] = []
+    means: list[float] = []
+    stds: list[float] = []
+    foreground_means: list[float] = []
+    for path in paths:
+        array = np.asarray(Image.open(path).convert("L"), dtype=np.float32)
+        foreground = array > threshold
+        dark_ratios.append(float((array <= threshold).mean()))
+        foreground_ratios.append(float(foreground.mean()))
+        means.append(float(array.mean()))
+        stds.append(float(array.std()))
+        foreground_means.append(float(array[foreground].mean()) if foreground.any() else 0.0)
+    return {
+        "dark_background_ratio": float(np.mean(dark_ratios)),
+        "foreground_ratio": float(np.mean(foreground_ratios)),
+        "gray_mean": float(np.mean(means)),
+        "gray_std": float(np.mean(stds)),
+        "foreground_gray_mean": float(np.mean(foreground_means)),
+    }
 
 
 def parse_args() -> argparse.Namespace:
@@ -64,6 +88,8 @@ def main() -> None:
 
         real_features = extract_feature_matrix(real_df["image_path"].astype(str).tolist())
         fake_features = extract_feature_matrix(fake_df["image_path"].astype(str).tolist())
+        real_paths = real_df["image_path"].astype(str).tolist()
+        fake_paths = fake_df["image_path"].astype(str).tolist()
         scaler = StandardScaler().fit(real_features)
         real_scaled = scaler.transform(real_features)
         fake_scaled = scaler.transform(fake_features)
@@ -83,6 +109,13 @@ def main() -> None:
             "real_feature_mean": float(real_features.mean()),
             "generated_feature_mean": float(fake_features.mean()),
         }
+        real_stats = _dobi_image_stats(real_paths)
+        fake_stats = _dobi_image_stats(fake_paths)
+        for key, value in real_stats.items():
+            reports[str(label)][f"real_{key}"] = value
+        for key, value in fake_stats.items():
+            reports[str(label)][f"generated_{key}"] = value
+            reports[str(label)][f"delta_{key}"] = value - real_stats[key]
 
     output = Path(args.output)
     output.parent.mkdir(parents=True, exist_ok=True)

@@ -18,3 +18,4 @@ accelerate>=0.30
 safetensors>=0.4
 peft>=0.10
 clean-fid>=0.1.35
+swanlab>=0.7.11
